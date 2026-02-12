@@ -22,6 +22,9 @@ running the script.
 
 
 
+USE DataWarehouse;
+GO
+
 CREATE OR ALTER PROCEDURE bronze.load_bronze AS 
 BEGIN
 	DECLARE @t_start_time DATETIME, @t_end_time DATETIME;

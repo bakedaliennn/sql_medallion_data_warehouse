@@ -11,6 +11,10 @@ will be permanently deleted. Proceed with caution and ensure you have proper bac
 running the script.
 */
 
+USE DataWarehouse;
+GO
+
+
 
 
 -- Create or replace the CRM tables in the bronze schema
