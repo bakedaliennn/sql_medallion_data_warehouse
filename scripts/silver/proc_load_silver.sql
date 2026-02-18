@@ -54,7 +54,7 @@ BEGIN
                 WHEN UPPER(TRIM(cst_gndr)) = 'M' THEN 'Married'
                 ELSE 'n/a'
             END AS cst_gndr,
-            cst_create_date
+            TRY_CONVERT(DATE, cst_create_date) AS cst_create_date
         FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY cst_id ORDER BY cst_create_date DESC) AS flag_last
             FROM bronze.crm_cust_info
@@ -87,8 +87,8 @@ BEGIN
                 WHEN 'T' THEN 'Touring'
                 ELSE 'n/a'
             END AS prd_line,
-            TRY_CAST(prd_start_dt AS DATE) AS prd_start_dt,
-            DATEADD(day, -1, LEAD(TRY_CAST(prd_start_dt AS DATE)) OVER (PARTITION BY prd_key ORDER BY TRY_CAST(prd_start_dt AS DATE) ASC)) AS prd_end_dt
+            TRY_CONVERT(DATE, prd_start_dt) AS prd_start_dt,
+            DATEADD(day, -1, LEAD(TRY_CONVERT(DATE, prd_start_dt)) OVER (PARTITION BY prd_key ORDER BY TRY_CONVERT(DATE, prd_start_dt) ASC)) AS prd_end_dt
         FROM bronze.crm_prd_info;
         SET @end_time = GETDATE();
         PRINT '>> Load duration (crm_prd_info): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
@@ -109,7 +109,7 @@ BEGIN
             sls_prd_key,
             sls_cust_id,
             CASE WHEN sls_order_dt IS NULL OR sls_order_dt = 0 OR LEN(CAST(sls_order_dt AS VARCHAR(20))) <> 8 THEN NULL
-                ELSE TRY_CONVERT(DATE, CAST(sls_order_dt AS CHAR(8))) END AS sls_order_dt,
+                ELSE TRY_CONVERT(DATE, CAST(sls_order_dt AS CHAR(8)), 112) END AS sls_order_dt,
             CASE WHEN sls_ship_dt IS NULL THEN NULL
                 ELSE TRY_CONVERT(DATE, sls_ship_dt) END AS sls_ship_dt,
             CASE WHEN sls_due_dt IS NULL THEN NULL
@@ -135,7 +135,7 @@ BEGIN
         INSERT INTO silver.erp_cust_az12 (cid, bdate, gen)
         SELECT
             CASE WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid, 4, LEN(cid) - 3) ELSE cid END AS cid,
-            CASE WHEN bdate > GETDATE() THEN NULL ELSE bdate END AS bdate,
+            CASE WHEN TRY_CONVERT(DATE, bdate) > CAST(GETDATE() AS DATE) THEN NULL ELSE TRY_CONVERT(DATE, bdate) END AS bdate,
             CASE WHEN UPPER(TRIM(gen)) IN ('F', 'FEMALE') THEN 'Female'
                  WHEN UPPER(TRIM(gen)) IN ('M', 'MALE') THEN 'Male'
                  ELSE 'n/a' END AS gen
