@@ -20,8 +20,13 @@ GO
 
 CREATE OR ALTER PROCEDURE silver.load_silver AS
 BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
     DECLARE @t_start_time DATETIME, @t_end_time DATETIME;
     DECLARE @start_time DATETIME, @end_time DATETIME;
+    DECLARE @rows_loaded INT;
+    DECLARE @current_table NVARCHAR(128);
 
     BEGIN TRY
         SET @t_start_time = GETDATE();
@@ -33,9 +38,10 @@ BEGIN
         -- CRM: CUSTOMER INFORMATION
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.crm_cust_info';
+        SET @current_table = 'silver.crm_cust_info';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.crm_cust_info;
-        PRINT '>> Inserting data into: silver.crm_cust_info';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.crm_cust_info (
             cst_id, cst_key, cst_firstname, cst_lastname, cst_marital_status, cst_gndr, cst_create_date
         )
@@ -61,7 +67,9 @@ BEGIN
             WHERE cst_id IS NOT NULL
         ) t
         WHERE flag_last = 1;
+        SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+        PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (crm_cust_info): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -69,9 +77,10 @@ BEGIN
         -- CRM: PRODUCT INFO
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.crm_prd_info';
+        SET @current_table = 'silver.crm_prd_info';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.crm_prd_info;
-        PRINT '>> Inserting data into: silver.crm_prd_info';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.crm_prd_info (
             prd_id, prd_key, cat_id, prd_nm, prd_cost, prd_line, prd_start_dt, prd_end_dt
         )
@@ -91,7 +100,9 @@ BEGIN
             TRY_CONVERT(DATE, prd_start_dt) AS prd_start_dt,
             DATEADD(day, -1, LEAD(TRY_CONVERT(DATE, prd_start_dt)) OVER (PARTITION BY prd_key ORDER BY TRY_CONVERT(DATE, prd_start_dt) ASC)) AS prd_end_dt
         FROM bronze.crm_prd_info;
+        SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+        PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (crm_prd_info): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -99,9 +110,10 @@ BEGIN
         -- CRM: SALES DETAILS
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.crm_sales_details';
+        SET @current_table = 'silver.crm_sales_details';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.crm_sales_details;
-        PRINT '>> Inserting data into: silver.crm_sales_details';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.crm_sales_details (
             sls_ord_num, sls_prd_key, sls_cust_id, sls_order_dt, sls_ship_dt, sls_due_dt, sls_sales, sls_quantity, sls_price
         )
@@ -122,7 +134,9 @@ BEGIN
             CASE WHEN sls_price IS NULL OR sls_price <= 0 THEN sls_sales / NULLIF(sls_quantity, 0)
                 ELSE TRY_CAST(sls_price AS DECIMAL(18,2)) END AS sls_price
         FROM bronze.crm_sales_details;
+        SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+        PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (crm_sales_details): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -130,9 +144,10 @@ BEGIN
         -- ERP: CUSTOMER AZ12
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.erp_cust_az12';
+        SET @current_table = 'silver.erp_cust_az12';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.erp_cust_az12;
-        PRINT '>> Inserting data into: silver.erp_cust_az12';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.erp_cust_az12 (cid, bdate, gen)
         SELECT
             CASE WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid, 4, LEN(cid) - 3) ELSE cid END AS cid,
@@ -141,7 +156,9 @@ BEGIN
                  WHEN UPPER(TRIM(gen)) IN ('M', 'MALE') THEN 'Male'
                  ELSE 'n/a' END AS gen
         FROM bronze.erp_cust_az12;
+        SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+        PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (erp_cust_az12): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -149,9 +166,10 @@ BEGIN
         -- ERP: LOCATION A101
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.erp_loc_a101';
+        SET @current_table = 'silver.erp_loc_a101';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.erp_loc_a101;
-        PRINT '>> Inserting data into: silver.erp_loc_a101';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.erp_loc_a101 (cid, cntry)
         SELECT
             REPLACE(cid, '-', '') AS cid,
@@ -160,7 +178,9 @@ BEGIN
                  WHEN TRIM(cntry) = '' OR cntry IS NULL THEN 'n/a'
                  ELSE TRIM(cntry) END AS cntry
         FROM bronze.erp_loc_a101;
+            SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+            PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (erp_loc_a101): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -168,12 +188,15 @@ BEGIN
         -- ERP: PRODUCT CATEGORY G1V2
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
-        PRINT '>> Truncating table: silver.erp_px_cat_g1v2';
+        SET @current_table = 'silver.erp_px_cat_g1v2';
+        PRINT '>> Truncating table: ' + @current_table;
         TRUNCATE TABLE silver.erp_px_cat_g1v2;
-        PRINT '>> Inserting data into: silver.erp_px_cat_g1v2';
+        PRINT '>> Inserting data into: ' + @current_table;
         INSERT INTO silver.erp_px_cat_g1v2 (id, cat, subcat, maintenance)
         SELECT id, cat, subcat, maintenance FROM bronze.erp_px_cat_g1v2;
+        SET @rows_loaded = @@ROWCOUNT;
         SET @end_time = GETDATE();
+        PRINT '>> Rows loaded: ' + CAST(@rows_loaded AS NVARCHAR);
         PRINT '>> Load duration (erp_px_cat_g1v2): ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
 
 
@@ -187,10 +210,14 @@ BEGIN
     BEGIN CATCH
         PRINT '===============================================';
         PRINT 'ERROR OCCURRED DURING SILVER LAYER LOAD';
+        PRINT 'Current table: ' + ISNULL(@current_table, 'N/A');
         PRINT 'Error number: ' + CAST(ERROR_NUMBER() AS NVARCHAR);
-        PRINT 'Error message: ' + ERROR_MESSAGE();
         PRINT 'Error state: ' + CAST(ERROR_STATE() AS NVARCHAR);
+        PRINT 'Error line: ' + CAST(ERROR_LINE() AS NVARCHAR);
+        PRINT 'Error procedure: ' + ISNULL(ERROR_PROCEDURE(), 'N/A');
+        PRINT 'Error message: ' + ERROR_MESSAGE();
         PRINT '===============================================';
+        THROW;
     END CATCH
 END
 GO
