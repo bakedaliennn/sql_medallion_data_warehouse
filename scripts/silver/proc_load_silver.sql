@@ -73,11 +73,12 @@ BEGIN
         TRUNCATE TABLE silver.crm_prd_info;
         PRINT '>> Inserting data into: silver.crm_prd_info';
         INSERT INTO silver.crm_prd_info (
-            prd_id, prd_key, prd_nm, prd_cost, prd_line, prd_start_dt, prd_end_dt
+            prd_id, prd_key, cat_id, prd_nm, prd_cost, prd_line, prd_start_dt, prd_end_dt
         )
         SELECT
             prd_id,
             TRIM(prd_key) AS prd_key,
+            REPLACE(SUBSTRING (prd_key, 1, 5), '-', '_') AS cat_id,
             TRIM(prd_nm) AS prd_nm,
             ISNULL(TRY_CAST(prd_cost AS DECIMAL(18,2)), 0) AS prd_cost,
             CASE UPPER(TRIM(prd_line))
