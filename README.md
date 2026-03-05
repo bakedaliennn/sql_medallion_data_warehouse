@@ -1,32 +1,123 @@
-# Data Warehouse and Analytics project
-Welcome to the **Data Warehouse and Analytics Project** repository! 🐘
+# SQL Data Warehouse Project (Medallion Architecture)
 
-This repository tracks the construction of a modern data warehouse with SQL Server that includes ETL processes, data modeling, and business-driven analytics. This is meant to be a portfolio project to demonstrate hands-on experience in data engineering and analytics.
+End-to-end SQL Server data warehouse project built with a **Bronze → Silver → Gold** medallion architecture.
+The solution ingests CRM/ERP CSV files, applies cleansing and standardization rules, and delivers analytics-ready dimensional and fact views.
 
----
-
-## Project requirements 🎯
-
-### Building the Data Warehouse (Data Engineering)
+## Project Overview
 
 ### Objectives
-1. Develop a modern data warehouse using SQL Server to consolidate sales and operations data.
-2. Enable analytical reporting and informed decision making.
+- Consolidate CRM and ERP datasets into a unified analytical model.
+- Apply robust transformation and data quality validation rules.
+- Expose business-friendly dimensions and facts for reporting and BI.
 
-#### Specifications
-**Data sources**: Import data from two source systems (ERP and CRM) provided as CSV files.
-**Data quality**: Cleanse and resolve data quality issues before analysis.
-**Data integration**: Combine both sources into a single, user-friendly data model designed for analytical queries.
+### Scope
+- Batch/full-load pipeline (no historization requirement).
+- Focus on data engineering + data modeling + quality checks.
 
-**Scope**: Focus on the latest dataset only; historization of data is not required.
-**Documentation**: Provide clear documentation of the data model to support both business stakeholders and analytics teams.
+## Architecture
 
-**BI and analytics**: Deliver a product that can deliver detailed insights into customer behavior, product performance, and sales trends.
+### Bronze Layer (`scripts/bronze`)
+- Raw ingestion from source CSV files into `bronze` tables.
+- Load orchestration in `bronze.load_bronze` with:
+	- table truncation + bulk insert,
+	- load duration and row-count logging,
+	- detailed error output (`table`, `file`, SQL error metadata).
 
+### Silver Layer (`scripts/silver`)
+- Cleaned and standardized relational tables in `silver` schema.
+- Business rules include trimming, type casting, categorical normalization, date handling, and measure correction.
+- Load orchestration in `silver.load_silver` with operational logging and error handling.
 
+### Gold Layer (`scripts/gold`)
+- Semantic model for analytics:
+	- `gold.dim_customers`
+	- `gold.dim_products`
+	- `gold.fact_sales`
+- Views are created with `CREATE OR ALTER VIEW` for idempotent deployment.
+
+## Source Data
+
+| Source | Files | Description |
+|---|---|---|
+| CRM | `cust_info.csv`, `prd_info.csv`, `sales_details.csv` | Customers, products, and sales transactions |
+| ERP | `CUST_AZ12.csv`, `LOC_A101.csv`, `PX_CAT_G1V2.csv` | Demographics, location, and product categories |
+
+## Repository Structure
+
+```text
+datasets/
+	source_crm/
+	source_erp/
+scripts/
+	init_database.sql
+	bronze/
+		ddl_bronze.sql
+		proc_load_bronze.sql
+	silver/
+		ddl_silver.sql
+		proc_load_silver.sql
+	gold/
+		ddl_gold.sql
+tests/
+	quality_checks_silver.sql
+	quality_checks_gold.sql
+docs/
+	data_catalog.md
+```
+
+## How to Run (End-to-End)
+
+Run scripts in this order:
+
+1. `scripts/init_database.sql`
+2. `scripts/bronze/ddl_bronze.sql`
+3. `scripts/silver/ddl_silver.sql`
+4. `scripts/bronze/proc_load_bronze.sql`
+	 - then execute: `EXEC bronze.load_bronze;`
+5. `scripts/silver/proc_load_silver.sql`
+	 - then execute: `EXEC silver.load_silver;`
+6. `scripts/gold/ddl_gold.sql`
+7. Quality checks:
+	 - `tests/quality_checks_silver.sql`
+	 - `tests/quality_checks_gold.sql`
+
+## Data Quality Strategy
+
+Quality checks are provided for both transformed layers:
+
+- **Silver checks** validate:
+	- duplicates/nulls on key fields,
+	- trimming and standardization,
+	- date validity and chronology,
+	- measure consistency and source alignment.
+
+- **Gold checks** validate:
+	- surrogate/business key integrity,
+	- dimension/fact referential integrity,
+	- date boundaries and metric consistency,
+	- analytics-readiness of semantic views.
+
+## Documentation
+
+- Data catalog for gold entities and columns: `docs/data_catalog.md`
+- SQL implementation scripts: `scripts/`
+- Validation scripts: `tests/`
+
+## Technology Stack
+
+- SQL Server (T-SQL)
+- CSV flat-file ingestion (`BULK INSERT`)
+- Medallion data modeling pattern (Bronze/Silver/Gold)
+
+## Notes
+
+- Bulk-load file paths are currently configured as absolute Windows paths in bronze load procedure.
+- Ensure the SQL Server service account can access the configured dataset directory.
 
 ## License
-This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and share this project with proper attribution.
 
-## Special thanks
-To @datawithbaraa for putting up amazing-quality educational content on Data Engineering. Without him and his content, this project wouldn't have been possible.
+This project is licensed under the [MIT License](LICENSE).
+
+## Acknowledgment
+
+Special thanks to @datawithbaraa for educational guidance and project inspiration.
