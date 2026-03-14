@@ -10,11 +10,10 @@ Script Purpose:
 	- Prints out updates on the process and running times for each load and the whole batch.
 	- Prints out errors number and details (if any) to aid debugging.
   Parameters:
-	- @data_root_path (optional): Root path that contains source_crm and source_erp folders.
+	- @data_root_path (required): Root path that contains source_crm and source_erp folders.
 
 Usage example:
-	EXEC bronze.load_bronze;
-	EXEC bronze.load_bronze @data_root_path = 'C:\Users\hecto\OneDrive\Documentos\VSCode\sql_medallion_data_warehouse\datasets';
+	EXEC bronze.load_bronze @data_root_path = 'C:\data\sql_medallion_data_warehouse\datasets';
 
 WARNING: Running this script will drop the tables in the bronze layer that match the defined name.
 This data will be permanently deleted. Proceed with caution and ensure you have proper backups before
@@ -27,11 +26,22 @@ USE DataWarehouse;
 GO
 
 CREATE OR ALTER PROCEDURE bronze.load_bronze
-	@data_root_path NVARCHAR(4000) = 'C:\Users\hecto\OneDrive\Documentos\VSCode\sql_medallion_data_warehouse\datasets'
+	@data_root_path NVARCHAR(4000) = NULL
 AS 
 BEGIN
 	SET NOCOUNT ON;
 	SET XACT_ABORT ON;
+
+	IF NULLIF(LTRIM(RTRIM(@data_root_path)), '') IS NULL
+	BEGIN
+		THROW 50001, 'Parameter @data_root_path is required. Example: EXEC bronze.load_bronze @data_root_path = ''C:\data\sql_medallion_data_warehouse\datasets'';', 1;
+	END
+
+	SET @data_root_path = LTRIM(RTRIM(@data_root_path));
+	WHILE RIGHT(@data_root_path, 1) IN ('\\', '/')
+	BEGIN
+		SET @data_root_path = LEFT(@data_root_path, LEN(@data_root_path) - 1);
+	END
 
 	DECLARE @t_start_time DATETIME, @t_end_time DATETIME;
 	DECLARE @start_time DATETIME, @end_time DATETIME;
@@ -239,7 +249,3 @@ BEGIN
 		THROW;
 	END CATCH
 END
-
-
----
-EXEC bronze.load_bronze;

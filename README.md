@@ -50,6 +50,7 @@ datasets/
 	source_erp/
 scripts/
 	init_database.sql
+	run_pipeline.sql
 	bronze/
 		ddl_bronze.sql
 		proc_load_bronze.sql
@@ -79,8 +80,7 @@ Run scripts in this order:
 5. `scripts/silver/proc_load_silver.sql`
 	 - creates/updates procedure definition only.
 6. Execute ETL procedures:
-	 - `EXEC bronze.load_bronze;`
-	 - or with custom root path:
+	 - set a machine-specific datasets path and run:
 	   `EXEC bronze.load_bronze @data_root_path = 'C:\\path\\to\\datasets';`
 	 - `EXEC silver.load_silver;`
 7. `scripts/gold/ddl_gold.sql`
@@ -120,9 +120,10 @@ Quality checks are provided for both transformed layers:
 
 ## Notes
 
-- Bronze load supports a configurable root path using `@data_root_path`.
+- Bronze load requires a configurable root path using `@data_root_path` (no hardcoded local default).
 - SQL Server reads files using the SQL Server service account, not your interactive Windows user.
 - Ensure the SQL Server service account can access the configured dataset directory.
+- Optional shortcut: use `scripts/run_pipeline.sql` to set path once and run bronze/silver in one execution.
 
 ## License
 
