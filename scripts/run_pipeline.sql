@@ -14,7 +14,7 @@ How to use:
 USE DataWarehouse;
 GO
 
-DECLARE @data_root_path NVARCHAR(4000) = 'C:\path\to\sql_medallion_data_warehouse\datasets';
+DECLARE @data_root_path NVARCHAR(4000) = 'YOUR PATH TO DATASETS FOLDER HERE';
 
 EXEC bronze.load_bronze @data_root_path = @data_root_path;
 EXEC silver.load_silver;
