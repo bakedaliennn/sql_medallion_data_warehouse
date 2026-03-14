@@ -16,14 +16,21 @@ Configuration:
     connection string for the one shown in the comments.
 """
 
+import os
 from pathlib import Path
 import pandas as pd
 import pyodbc
 import sqlalchemy
 
 # ── Configuration ──────────────────────────────────────────────
-SERVER   = "localhost"       # e.g. "localhost\\SQLEXPRESS"
-DATABASE = "DataWarehouse"
+# Optional environment variables:
+#   DW_SERVER (default: localhost)
+#   DW_DATABASE (default: DataWarehouse)
+#   DW_USERNAME / DW_PASSWORD (if both are set, SQL auth is used)
+SERVER = os.getenv("DW_SERVER", "localhost")       # e.g. "localhost\\SQLEXPRESS"
+DATABASE = os.getenv("DW_DATABASE", "DataWarehouse")
+USERNAME = os.getenv("DW_USERNAME")
+PASSWORD = os.getenv("DW_PASSWORD")
 # ──────────────────────────────────────────────────────────────
 
 
@@ -65,19 +72,26 @@ VIEWS = {
 
 def build_engine() -> sqlalchemy.Engine:
     """
-    Build a SQLAlchemy engine using pyodbc + Windows Authentication.
-    The ODBC driver version is detected automatically.
+    Build a SQLAlchemy engine using pyodbc.
 
-    For SQL Server login instead, replace the connection string with:
-        mssql+pyodbc://<user>:<password>@<server>/<database>
-            ?driver=ODBC+Driver+17+for+SQL+Server
+    Auth behavior:
+    - If DW_USERNAME and DW_PASSWORD are set: SQL authentication.
+    - Otherwise: Windows authentication (Trusted_Connection=yes).
+
+    The ODBC driver version is detected automatically.
     """
     driver = _find_odbc_driver().replace(" ", "+")
-    connection_string = (
-        f"mssql+pyodbc://{SERVER}/{DATABASE}"
-        f"?driver={driver}"
-        "&Trusted_Connection=yes"
-    )
+    if USERNAME and PASSWORD:
+        connection_string = (
+            f"mssql+pyodbc://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}"
+            f"?driver={driver}"
+        )
+    else:
+        connection_string = (
+            f"mssql+pyodbc://{SERVER}/{DATABASE}"
+            f"?driver={driver}"
+            "&Trusted_Connection=yes"
+        )
     return sqlalchemy.create_engine(connection_string, fast_executemany=True)
 
 

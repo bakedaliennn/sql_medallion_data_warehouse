@@ -15,9 +15,8 @@ Script Purpose:
 Usage example:
 	EXEC bronze.load_bronze @data_root_path = 'C:\data\sql_medallion_data_warehouse\datasets';
 
-WARNING: Running this script will drop the tables in the bronze layer that match the defined name.
-This data will be permanently deleted. Proceed with caution and ensure you have proper backups before
-running the script.
+WARNING: Running this procedure truncates the bronze tables before each load.
+Existing bronze data will be deleted and replaced by the new full load.
 */
 
 

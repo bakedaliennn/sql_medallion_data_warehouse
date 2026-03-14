@@ -51,13 +51,13 @@ BEGIN
             TRIM(cst_firstname),
             TRIM(cst_lastname),
             CASE
-                WHEN UPPER(TRIM(cst_marital_status)) = 'F' THEN 'Female'
-                WHEN UPPER(TRIM(cst_marital_status)) = 'M' THEN 'Male'
+                WHEN UPPER(TRIM(cst_marital_status)) = 'S' THEN 'Single'
+                WHEN UPPER(TRIM(cst_marital_status)) = 'M' THEN 'Married'
                 ELSE 'n/a'
             END AS cst_marital_status,
             CASE
-                WHEN UPPER(TRIM(cst_gndr)) = 'S' THEN 'Single'
-                WHEN UPPER(TRIM(cst_gndr)) = 'M' THEN 'Married'
+                WHEN UPPER(TRIM(cst_gndr)) = 'F' THEN 'Female'
+                WHEN UPPER(TRIM(cst_gndr)) = 'M' THEN 'Male'
                 ELSE 'n/a'
             END AS cst_gndr,
             TRY_CONVERT(DATE, cst_create_date) AS cst_create_date

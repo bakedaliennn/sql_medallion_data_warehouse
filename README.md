@@ -30,6 +30,22 @@ Install the following before running anything else:
 - Batch/full-load pipeline (no historization requirement).
 - Focus on data engineering + data modeling + quality checks + exploratory analysis.
 
+## Portfolio Relevance for Biomedical Pricing Analyst Roles
+
+This project demonstrates core skills used in pricing analytics pipelines:
+
+- Multi-source commercial data integration into a governed analytical model.
+- Data quality controls for trusted pricing and revenue reporting.
+- Reusable semantic layer design for KPI-ready BI consumption.
+- Python-based exploratory analysis for trend and mix diagnostics.
+
+To align even more directly with biomedical pricing work, extend the gold layer with:
+
+- Net price waterfall metrics (list price, discounts, rebates, net realized price).
+- Price-volume-mix decomposition by product, region, and customer segment.
+- Contract and payer/channel dimensions for reimbursement-aware analytics.
+- Outlier detection for abrupt price changes, margin erosion, and anomalous discounting.
+
 ## Architecture
 
 ### Bronze Layer (`scripts/bronze`)
@@ -145,8 +161,13 @@ conda activate sql_medallion
 python -m ipykernel install --user --name sql_medallion --display-name "sql_medallion"
 
 # 4. Export gold views to CSV
-#    Open scripts/export/export_gold_views.py and set SERVER if your instance is not 'localhost'.
-#    The script auto-detects whether you have ODBC Driver 17 or 18 installed.
+#    The script auto-detects whether you have ODBC Driver 18, 17, or 13 installed.
+#    Optional config via environment variables:
+#      $env:DW_SERVER="localhost\\SQLEXPRESS"
+#      $env:DW_DATABASE="DataWarehouse"
+#      # Optional SQL auth (if omitted, Windows auth is used):
+#      $env:DW_USERNAME="sa"
+#      $env:DW_PASSWORD="<your_password>"
 python scripts/export/export_gold_views.py
 
 # 5. Open the EDA notebook in VS Code
@@ -192,7 +213,7 @@ Quality checks are provided for both transformed layers:
 - Bronze load requires a configurable root path using `@data_root_path` (no hardcoded local default).
 - SQL Server reads files using the SQL Server service account, not your interactive Windows user. Ensure it has read access to the `datasets/` folder path you provide.
 - Optional shortcut: use `scripts/run_pipeline.sql` to set path once and run bronze/silver in one execution.
-- The Python export script uses **Windows Authentication** by default. See the `build_engine()` docstring in `export_gold_views.py` for switching to SQL login.
+- The Python export script defaults to **Windows Authentication**, and also supports SQL login via `DW_USERNAME` + `DW_PASSWORD` environment variables.
 - The export script **auto-detects** your installed ODBC Driver (18 → 17 → 13). If none is found, it prints a download link.
 - Exported CSVs in `exports/gold/` are tracked in git so the notebook layer can run without a live SQL Server connection. `.xlsx` files are excluded via `.gitignore`.
 

@@ -49,14 +49,14 @@ Where prd_nm != TRIM(prd_nm);
 
 -- Check for unwanted spaces in product names (bronze source)
 -- Expected outcome: 0 rows (all source product names are trimmed)
-SELECT prd_cost
+SELECT prd_nm
 FROM bronze.crm_prd_info
 WHERE prd_nm != TRIM(prd_nm);
 
 -- Check for unwanted negative values
 -- Expected outcome: 0 rows (prd_cost is non-negative and not NULL)
 SELECT prd_cost
-FROM bronze.crm_prd_info
+FROM silver.crm_prd_info
 WHERE prd_cost < 0 OR prd_cost IS NULL;
 
 -- Check standardization and consistency
