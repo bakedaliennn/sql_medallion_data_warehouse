@@ -156,3 +156,68 @@ WHERE sales_amount != quantity * sls_price
 -- Expected outcome: review-only (data present and transformed as intended)
 SELECT *
 FROM gold.fact_sales;
+
+
+/*
+============================================================
+gold.pricing_kpi_monthly quality checks
+============================================================
+*/
+
+-- Check for nulls and duplicate grain in KPI view
+-- Expected outcome: 0 rows (order_month + product_key + country is unique and non-NULL)
+SELECT order_month, product_key, country, COUNT(*) AS duplicate_count
+FROM gold.pricing_kpi_monthly
+GROUP BY order_month, product_key, country
+HAVING COUNT(*) > 1
+	OR order_month IS NULL
+	OR product_key IS NULL
+	OR country IS NULL;
+
+-- Check KPI measures are positive and internally consistent
+-- Expected outcome: 0 rows
+SELECT order_month, product_key, units_sold, gross_sales_amount, weighted_avg_unit_price, min_unit_price, max_unit_price
+FROM gold.pricing_kpi_monthly
+WHERE units_sold <= 0
+	OR gross_sales_amount <= 0
+	OR weighted_avg_unit_price <= 0
+	OR min_unit_price <= 0
+	OR max_unit_price <= 0
+	OR min_unit_price > max_unit_price
+	OR weighted_avg_unit_price < min_unit_price
+	OR weighted_avg_unit_price > max_unit_price;
+
+-- Reconcile KPI aggregated sales against fact_sales at the same grain
+-- Expected outcome: 0 rows (no mismatches at month/product/country grain)
+WITH fact_monthly AS (
+	SELECT
+		DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
+		fs.product_key,
+		dc.country,
+		CAST(SUM(fs.sales_amount) AS DECIMAL(18,2)) AS gross_sales_amount
+	FROM gold.fact_sales fs
+	INNER JOIN gold.dim_customers dc
+		ON fs.customer_key = dc.customer_key
+	WHERE fs.order_date IS NOT NULL
+	GROUP BY
+		DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1),
+		fs.product_key,
+		dc.country
+)
+SELECT
+	COALESCE(k.order_month, f.order_month) AS order_month,
+	COALESCE(k.product_key, f.product_key) AS product_key,
+	COALESCE(k.country, f.country) AS country,
+	k.gross_sales_amount AS kpi_sales_amount,
+	f.gross_sales_amount AS fact_sales_amount
+FROM gold.pricing_kpi_monthly k
+FULL OUTER JOIN fact_monthly f
+	ON k.order_month = f.order_month
+	AND k.product_key = f.product_key
+	AND k.country = f.country
+WHERE ABS(COALESCE(k.gross_sales_amount, 0) - COALESCE(f.gross_sales_amount, 0)) > 0.01;
+
+-- Check final output
+-- Expected outcome: review-only (KPI data present and transformed as intended)
+SELECT *
+FROM gold.pricing_kpi_monthly;

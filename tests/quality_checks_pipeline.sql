@@ -76,13 +76,13 @@ INSERT INTO @checks(layer, check_name, status, details)
 SELECT
 	'GOLD',
 	'All expected gold views exist',
-	CASE WHEN COUNT(*) = 3 THEN 'PASS' ELSE 'FAIL' END,
-	'Found ' + CAST(COUNT(*) AS NVARCHAR(20)) + ' of 3 expected views.'
+	CASE WHEN COUNT(*) = 4 THEN 'PASS' ELSE 'FAIL' END,
+	'Found ' + CAST(COUNT(*) AS NVARCHAR(20)) + ' of 4 expected views.'
 FROM sys.views v
 JOIN sys.schemas s
 	ON v.schema_id = s.schema_id
 WHERE s.name = 'gold'
-  AND v.name IN ('dim_customers', 'dim_products', 'fact_sales');
+  AND v.name IN ('dim_customers', 'dim_products', 'fact_sales', 'pricing_kpi_monthly');
 
 /*
 ============================================================
@@ -149,6 +149,10 @@ INSERT INTO @checks VALUES
 SELECT @row_count = COUNT(*) FROM gold.fact_sales;
 INSERT INTO @checks VALUES
 ('GOLD', 'gold.fact_sales has rows', CASE WHEN @row_count > 0 THEN 'PASS' ELSE 'FAIL' END, 'Rows: ' + CAST(@row_count AS NVARCHAR(20)));
+
+SELECT @row_count = COUNT(*) FROM gold.pricing_kpi_monthly;
+INSERT INTO @checks VALUES
+('GOLD', 'gold.pricing_kpi_monthly has rows', CASE WHEN @row_count > 0 THEN 'PASS' ELSE 'FAIL' END, 'Rows: ' + CAST(@row_count AS NVARCHAR(20)));
 
 /*
 ============================================================

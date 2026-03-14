@@ -65,10 +65,11 @@ To align even more directly with biomedical pricing work, extend the gold layer 
 	- `gold.dim_customers`
 	- `gold.dim_products`
 	- `gold.fact_sales`
+	- `gold.pricing_kpi_monthly`
 - Views are created with `CREATE OR ALTER VIEW` for idempotent deployment.
 
 ### Export Layer (`scripts/export`)
-- Python script (`export_gold_views.py`) reads the three gold views via SQLAlchemy/pyodbc and writes them as UTF-8 CSV files to `exports/gold/`.
+- Python script (`export_gold_views.py`) reads the gold views via SQLAlchemy/pyodbc and writes them as UTF-8 CSV files to `exports/gold/`.
 - Exported CSVs are committed to the repository so the notebook layer can run independently of a live SQL Server connection.
 
 ### Notebook Layer (`notebooks/`)
@@ -110,6 +111,7 @@ exports/
         dim_customers.csv
         dim_products.csv
         fact_sales.csv
+	pricing_kpi_monthly.csv
 notebooks/
     01_eda_gold_layer.ipynb    ← exploratory data analysis
 tests/

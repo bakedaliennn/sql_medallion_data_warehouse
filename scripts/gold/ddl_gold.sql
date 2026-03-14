@@ -89,3 +89,38 @@ LEFT JOIN gold.dim_products pr
 LEFT JOIN gold.dim_customers cu
 	ON sd.sls_cust_id = cu.customer_id;
 GO
+
+
+-- Create or alter pricing KPI view in the gold schema
+
+CREATE OR ALTER VIEW gold.pricing_kpi_monthly AS
+SELECT
+	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
+	dp.product_key,
+	dp.product_number,
+	dp.product_name,
+	dp.category,
+	dp.subcategory,
+	dc.country,
+	COUNT_BIG(*) AS sales_line_count,
+	COUNT(DISTINCT fs.order_number) AS order_count,
+	SUM(CAST(fs.quantity AS BIGINT)) AS units_sold,
+	CAST(SUM(fs.sales_amount) AS DECIMAL(18,2)) AS gross_sales_amount,
+	CAST(SUM(fs.sales_amount) / NULLIF(SUM(CAST(fs.quantity AS DECIMAL(18,4))), 0) AS DECIMAL(18,4)) AS weighted_avg_unit_price,
+	MIN(fs.sls_price) AS min_unit_price,
+	MAX(fs.sls_price) AS max_unit_price
+FROM gold.fact_sales fs
+INNER JOIN gold.dim_products dp
+	ON fs.product_key = dp.product_key
+INNER JOIN gold.dim_customers dc
+	ON fs.customer_key = dc.customer_key
+WHERE fs.order_date IS NOT NULL
+GROUP BY
+	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1),
+	dp.product_key,
+	dp.product_number,
+	dp.product_name,
+	dp.category,
+	dp.subcategory,
+	dc.country;
+GO

@@ -3,7 +3,7 @@
 Export Gold Layer Views to CSV
 ==============================================================
 Connects to the DataWarehouse SQL Server database, queries the
-three gold views, and writes each one to a CSV file inside
+gold views, and writes each one to a CSV file inside
 exports/gold/.
 
 Usage (from the repo root, with the conda env active):
@@ -67,6 +67,7 @@ VIEWS = {
     "gold.dim_customers": "dim_customers.csv",
     "gold.dim_products":  "dim_products.csv",
     "gold.fact_sales":    "fact_sales.csv",
+    "gold.pricing_kpi_monthly": "pricing_kpi_monthly.csv",
 }
 
 

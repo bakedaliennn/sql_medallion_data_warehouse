@@ -53,3 +53,24 @@ This catalog documents the business-ready views in the gold layer.
 | quantity | INT | Quantity sold. |
 | sls_price | DECIMAL(18,2) | Unit price used in the transaction. |
 
+## gold.pricing_kpi_monthly
+
+**Description:** Monthly pricing KPI view at month-product-country grain for pricing trend and mix diagnostics.
+
+| Column Name | Data Type | Description |
+|---|---|---|
+| order_month | DATE | First day of month derived from order date. |
+| product_key | BIGINT | Foreign key reference to `gold.dim_products.product_key`. |
+| product_number | NVARCHAR(50) | Product business key for analyst-friendly filtering. |
+| product_name | NVARCHAR(100) | Product display name. |
+| category | NVARCHAR(100) | Product category from ERP mapping. |
+| subcategory | NVARCHAR(100) | Product subcategory from ERP mapping. |
+| country | NVARCHAR(50) | Customer country from location mapping. |
+| sales_line_count | BIGINT | Number of sales lines included in the aggregate grain. |
+| order_count | BIGINT | Distinct orders at the aggregate grain. |
+| units_sold | BIGINT | Sum of quantities sold. |
+| gross_sales_amount | DECIMAL(18,2) | Sum of sales amount at the aggregate grain. |
+| weighted_avg_unit_price | DECIMAL(18,4) | Quantity-weighted average unit price, computed as gross sales / units sold. |
+| min_unit_price | DECIMAL(18,2) | Minimum unit price observed in the grain. |
+| max_unit_price | DECIMAL(18,2) | Maximum unit price observed in the grain. |
+
