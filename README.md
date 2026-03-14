@@ -90,7 +90,8 @@ Run scripts in this order:
 	 - `tests/quality_checks_gold.sql`
 	 - `tests/troubleshoot_pipeline_load.sql` (diagnostic runbook)
 
-## Data Quality Strategy
+## Data Quality 
+These scripts are optional in terms of the functionality of the layers' ddl and load procedures, **BUT** important for data traceability.
 
 Quality checks are provided for both transformed layers:
 
