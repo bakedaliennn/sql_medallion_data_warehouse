@@ -61,6 +61,8 @@ scripts/
 tests/
 	quality_checks_silver.sql
 	quality_checks_gold.sql
+	quality_checks_pipeline.sql
+	troubleshoot_pipeline_load.sql
 docs/
 	data_catalog.md
 ```
@@ -73,13 +75,20 @@ Run scripts in this order:
 2. `scripts/bronze/ddl_bronze.sql`
 3. `scripts/silver/ddl_silver.sql`
 4. `scripts/bronze/proc_load_bronze.sql`
-	 - then execute: `EXEC bronze.load_bronze;`
+	 - creates/updates procedure definition only.
 5. `scripts/silver/proc_load_silver.sql`
-	 - then execute: `EXEC silver.load_silver;`
-6. `scripts/gold/ddl_gold.sql`
-7. Quality checks:
+	 - creates/updates procedure definition only.
+6. Execute ETL procedures:
+	 - `EXEC bronze.load_bronze;`
+	 - or with custom root path:
+	   `EXEC bronze.load_bronze @data_root_path = 'C:\\path\\to\\datasets';`
+	 - `EXEC silver.load_silver;`
+7. `scripts/gold/ddl_gold.sql`
+8. Quality checks:
+	 - `tests/quality_checks_pipeline.sql` (quick pipeline smoke checks)
 	 - `tests/quality_checks_silver.sql`
 	 - `tests/quality_checks_gold.sql`
+	 - `tests/troubleshoot_pipeline_load.sql` (diagnostic runbook)
 
 ## Data Quality Strategy
 
@@ -111,7 +120,8 @@ Quality checks are provided for both transformed layers:
 
 ## Notes
 
-- Bulk-load file paths are currently configured as absolute Windows paths in bronze load procedure.
+- Bronze load supports a configurable root path using `@data_root_path`.
+- SQL Server reads files using the SQL Server service account, not your interactive Windows user.
 - Ensure the SQL Server service account can access the configured dataset directory.
 
 ## License
