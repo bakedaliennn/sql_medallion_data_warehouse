@@ -18,12 +18,37 @@ Configuration:
 
 from pathlib import Path
 import pandas as pd
+import pyodbc
 import sqlalchemy
 
 # ── Configuration ──────────────────────────────────────────────
 SERVER   = "localhost"       # e.g. "localhost\\SQLEXPRESS"
 DATABASE = "DataWarehouse"
 # ──────────────────────────────────────────────────────────────
+
+
+def _find_odbc_driver() -> str:
+    """
+    Return the best available Microsoft ODBC Driver for SQL Server.
+
+    Tries newer drivers first so the script works whether the user has
+    Driver 13, 17, or 18 installed — no manual version editing required.
+    """
+    preferred = [
+        "ODBC Driver 18 for SQL Server",
+        "ODBC Driver 17 for SQL Server",
+        "ODBC Driver 13 for SQL Server",
+    ]
+    available = set(pyodbc.drivers())
+    for driver in preferred:
+        if driver in available:
+            return driver
+    raise RuntimeError(
+        "No Microsoft ODBC Driver for SQL Server was found on this machine.\n"
+        "Download and install it from:\n"
+        "  https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server\n"
+        f"Drivers currently installed: {sorted(available) or ['(none)']}"
+    )
 
 # Output folder (repo-root/exports/gold/)
 REPO_ROOT  = Path(__file__).resolve().parents[2]
@@ -41,14 +66,16 @@ VIEWS = {
 def build_engine() -> sqlalchemy.Engine:
     """
     Build a SQLAlchemy engine using pyodbc + Windows Authentication.
+    The ODBC driver version is detected automatically.
 
     For SQL Server login instead, replace the connection string with:
         mssql+pyodbc://<user>:<password>@<server>/<database>
             ?driver=ODBC+Driver+17+for+SQL+Server
     """
+    driver = _find_odbc_driver().replace(" ", "+")
     connection_string = (
         f"mssql+pyodbc://{SERVER}/{DATABASE}"
-        "?driver=ODBC+Driver+17+for+SQL+Server"
+        f"?driver={driver}"
         "&Trusted_Connection=yes"
     )
     return sqlalchemy.create_engine(connection_string, fast_executemany=True)

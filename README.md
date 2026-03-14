@@ -3,6 +3,21 @@
 End-to-end, multi-language data warehouse project built with a **Bronze → Silver → Gold** medallion architecture.
 The solution ingests CRM/ERP CSV files, applies cleansing and standardization rules in SQL Server, exports the final gold views as CSV files, and performs exploratory data analysis in Python/Jupyter.
 
+## Prerequisites
+
+Install the following before running anything else:
+
+| Tool | Notes |
+|---|---|
+| **SQL Server** (Express or Developer) | Both editions are free. [Download here](https://www.microsoft.com/sql-server/sql-server-downloads). |
+| **SSMS or Azure Data Studio** | For running `.sql` scripts. [SSMS](https://learn.microsoft.com/sql/ssms/download-sql-server-management-studio-ssms) · [Azure Data Studio](https://learn.microsoft.com/sql/azure-data-studio/download-azure-data-studio) |
+| **Microsoft ODBC Driver 17+ for SQL Server** | Required by the Python export script. [Download here](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server). Driver 17 and 18 are both supported — the script auto-detects which one is installed. |
+| **Miniconda or Anaconda** | For the Python environment. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is the lightweight option. |
+| **VS Code** with the **Jupyter extension** | For running the EDA notebook. The extension is available in the VS Code marketplace (`ms-toolsai.jupyter`). |
+| **Git** | For cloning the repository. |
+
+> **Windows PowerShell note:** Before using `conda activate` in PowerShell for the first time, run `conda init powershell` once in an admin terminal and then restart your shell.
+
 ## Project Overview
 
 ### Objectives
@@ -104,8 +119,11 @@ Run scripts in this order:
 5. `scripts/silver/proc_load_silver.sql`
 	 - creates/updates procedure definition only.
 6. Execute ETL procedures:
-	 - set a machine-specific datasets path and run:
-	   `EXEC bronze.load_bronze @data_root_path = 'C:\\path\\to\\datasets';`
+	 - Pass the absolute path to the `datasets/` folder on your machine (use single backslashes or forward slashes):
+	   ```sql
+	   EXEC bronze.load_bronze @data_root_path = 'C:\Users\you\projects\sql_medallion_data_warehouse\datasets';
+	   ```
+	   > **Note:** SQL Server reads these files using its own service account, not your Windows user. If you get a permission error, [grant the SQL Server service account read access](https://learn.microsoft.com/sql/relational-databases/import-export/bulk-import-and-export-of-data-sql-server) to that folder, or copy the `datasets/` folder to a location the service account can reach. An easy alternative is to use `scripts/run_pipeline.sql` (see step below).
 	 - `EXEC silver.load_silver;`
 7. `scripts/gold/ddl_gold.sql`
 8. Quality checks:
@@ -115,20 +133,25 @@ Run scripts in this order:
 
 ### Part 2 — Python Export & EDA
 
-```bash
-# 1. Create and activate the conda environment (once)
+```powershell
+# 1. Create conda environment (run once from the repo root)
 conda env create -f environment.yml
+
+# 2. Activate it
+#    If 'conda activate' fails in PowerShell, run 'conda init powershell' first (admin terminal), then restart.
 conda activate sql_medallion
 
-# 2. Register the Jupyter kernel (once)
+# 3. Register the kernel so VS Code can see it (run once)
 python -m ipykernel install --user --name sql_medallion --display-name "sql_medallion"
 
-# 3. Export gold views to CSV
-#    Edit SERVER in the script if your instance is not localhost.
+# 4. Export gold views to CSV
+#    Open scripts/export/export_gold_views.py and set SERVER if your instance is not 'localhost'.
+#    The script auto-detects whether you have ODBC Driver 17 or 18 installed.
 python scripts/export/export_gold_views.py
 
-# 4. Open the EDA notebook in VS Code (select kernel: sql_medallion)
-#    notebooks/01_eda_gold_layer.ipynb
+# 5. Open the EDA notebook in VS Code
+#    File: notebooks/01_eda_gold_layer.ipynb
+#    Select kernel: sql_medallion  (top-right corner of the notebook)
 ```
 
 ## Data Quality
@@ -167,11 +190,11 @@ Quality checks are provided for both transformed layers:
 ## Notes
 
 - Bronze load requires a configurable root path using `@data_root_path` (no hardcoded local default).
-- SQL Server reads files using the SQL Server service account, not your interactive Windows user.
-- Ensure the SQL Server service account can access the configured dataset directory.
+- SQL Server reads files using the SQL Server service account, not your interactive Windows user. Ensure it has read access to the `datasets/` folder path you provide.
 - Optional shortcut: use `scripts/run_pipeline.sql` to set path once and run bronze/silver in one execution.
-- The export script uses Windows Authentication by default. See the script header for SQL login instructions.
-- Exported CSVs in `exports/gold/` are tracked in git; `.xlsx` files are excluded via `.gitignore`.
+- The Python export script uses **Windows Authentication** by default. See the `build_engine()` docstring in `export_gold_views.py` for switching to SQL login.
+- The export script **auto-detects** your installed ODBC Driver (18 → 17 → 13). If none is found, it prints a download link.
+- Exported CSVs in `exports/gold/` are tracked in git so the notebook layer can run without a live SQL Server connection. `.xlsx` files are excluded via `.gitignore`.
 
 ## License
 
