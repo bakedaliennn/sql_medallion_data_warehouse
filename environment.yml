@@ -1,0 +1,21 @@
+name: sql_medallion
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  # Data access & SQL connectivity
+  - pyodbc
+  - sqlalchemy
+  # Core data science
+  - pandas
+  - numpy
+  # Visualisation
+  - matplotlib
+  - seaborn
+  # Jupyter environment
+  - jupyterlab
+  - ipykernel
+  - pip:
+      - openpyxl        # Excel read/write via pandas

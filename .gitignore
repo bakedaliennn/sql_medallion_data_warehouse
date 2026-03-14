@@ -1,0 +1,23 @@
+# ── Generated export files ────────────────────────────────────
+# CSV snapshots of gold views are tracked (text-friendly, diff nicely in git).
+# Excel files are excluded — they are binary, timestamped, and grow git history.
+exports/gold/*.xlsx
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+
+# ── Jupyter ──────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── OS / editor cruft ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/settings.json
