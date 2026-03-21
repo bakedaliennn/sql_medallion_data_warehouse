@@ -30,22 +30,6 @@ Install the following before running anything else:
 - Batch/full-load pipeline (no historization requirement).
 - Focus on data engineering + data modeling + quality checks + exploratory analysis.
 
-## Portfolio Relevance for Biomedical Pricing Analyst Roles
-
-This project demonstrates core skills used in pricing analytics pipelines:
-
-- Multi-source commercial data integration into a governed analytical model.
-- Data quality controls for trusted pricing and revenue reporting.
-- Reusable semantic layer design for KPI-ready BI consumption.
-- Python-based exploratory analysis for trend and mix diagnostics.
-
-To align even more directly with biomedical pricing work, extend the gold layer with:
-
-- Net price waterfall metrics (list price, discounts, rebates, net realized price).
-- Price-volume-mix decomposition by product, region, and customer segment.
-- Contract and payer/channel dimensions for reimbursement-aware analytics.
-- Outlier detection for abrupt price changes, margin erosion, and anomalous discounting.
-
 ## Architecture
 
 ### Bronze Layer (`scripts/bronze`)
