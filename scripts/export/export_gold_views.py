@@ -2,18 +2,20 @@
 ==============================================================
 Export Gold Layer Views to CSV
 ==============================================================
-Connects to the DataWarehouse SQL Server database, queries the
-gold views, and writes each one to a CSV file inside
-exports/gold/.
+Why this script exists:
+  Publish a portable analytics extract from the gold semantic layer so notebooks
+  and downstream consumers can run without a live SQL connection.
 
 Usage (from the repo root, with the conda env active):
     python scripts/export/export_gold_views.py
 
-Configuration:
-    Edit the SERVER and DATABASE constants below to match your
-    SQL Server instance.  Windows Authentication is used by
-    default (Trusted_Connection=yes).  For SQL login, swap the
-    connection string for the one shown in the comments.
+Operational notes:
+    Configure connection settings through DW_* environment variables.
+    Defaults target local Windows Authentication for fast local onboarding.
+
+Warning:
+    ODBC Driver 18 may require certificate trust settings in local environments.
+    Use DW_ENCRYPT and DW_TRUST_SERVER_CERTIFICATE as needed.
 """
 
 import os
@@ -22,7 +24,7 @@ import pandas as pd
 import pyodbc
 import sqlalchemy
 
-# ── Configuration ──────────────────────────────────────────────
+# Connection defaults prioritize local development ergonomics.
 # Optional environment variables:
 #   DW_SERVER (default: localhost)
 #   DW_DATABASE (default: DataWarehouse)
@@ -35,7 +37,6 @@ USERNAME = os.getenv("DW_USERNAME")
 PASSWORD = os.getenv("DW_PASSWORD")
 ENCRYPT = os.getenv("DW_ENCRYPT", "yes")
 TRUST_SERVER_CERTIFICATE = os.getenv("DW_TRUST_SERVER_CERTIFICATE", "yes")
-# ──────────────────────────────────────────────────────────────
 
 
 def _find_odbc_driver() -> str:
@@ -61,12 +62,12 @@ def _find_odbc_driver() -> str:
         f"Drivers currently installed: {sorted(available) or ['(none)']}"
     )
 
-# Output folder (repo-root/exports/gold/)
+# Keep exports under versioned project artifacts for reproducible analysis inputs.
 REPO_ROOT  = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "exports" / "gold"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Gold views to export  { view name: output CSV filename }
+# Pin exported datasets to canonical gold entities to keep notebook assumptions stable.
 VIEWS = {
     "gold.dim_customers": "dim_customers.csv",
     "gold.dim_products":  "dim_products.csv",

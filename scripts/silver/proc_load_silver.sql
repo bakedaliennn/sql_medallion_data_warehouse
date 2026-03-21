@@ -2,17 +2,15 @@
 ============================================================
 Stored procedure: Load Silver layer
 ============================================================
-Script Purpose:
-  This stored procedure loads data into the silver schema from the bronze schema.
-  It performs the following actions:
-    - Truncates the silver tables before inserting cleaned data.
-    - Transforms and standardizes fields while inserting from bronze.
-    - Prints timing information for each step and the full batch.
+Why this script exists:
+    Turn raw bronze records into trusted, analysis-ready entities while keeping
+    each run fully repeatable and operationally observable.
 
 Usage example:
   EXEC silver.load_silver;
 
-WARNING: Running this script will truncate data in the silver layer. Proceed with caution.
+WARNING: Running this procedure truncates silver tables before reload.
+Existing silver data is replaced by the current full-refresh result.
 */
 
 USE DataWarehouse;
@@ -35,7 +33,7 @@ BEGIN
         PRINT '======================================';
 
         --------------------------------------------------------------------------------
-        -- CRM: CUSTOMER INFORMATION
+        -- Prioritize latest customer master attributes so dimensions remain consistent.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.crm_cust_info';
@@ -74,7 +72,7 @@ BEGIN
 
 
         --------------------------------------------------------------------------------
-        -- CRM: PRODUCT INFO
+        -- Standardize product taxonomy early so category joins are reliable in gold views.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.crm_prd_info';
@@ -107,7 +105,7 @@ BEGIN
 
 
         --------------------------------------------------------------------------------
-        -- CRM: SALES DETAILS
+        -- Repair invalid order-date and pricing records to avoid metric distortion.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.crm_sales_details';
@@ -141,7 +139,7 @@ BEGIN
 
 
         --------------------------------------------------------------------------------
-        -- ERP: CUSTOMER AZ12
+        -- Harmonize demographic codes with CRM keys to preserve customer enrichment quality.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.erp_cust_az12';
@@ -163,7 +161,7 @@ BEGIN
 
 
         --------------------------------------------------------------------------------
-        -- ERP: LOCATION A101
+        -- Normalize country values so geographic analysis is not fragmented by code variants.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.erp_loc_a101';
@@ -185,7 +183,7 @@ BEGIN
 
 
         --------------------------------------------------------------------------------
-        -- ERP: PRODUCT CATEGORY G1V2
+        -- Retain source category mapping as-is to keep lineage transparent.
         --------------------------------------------------------------------------------
         SET @start_time = GETDATE();
         SET @current_table = 'silver.erp_px_cat_g1v2';

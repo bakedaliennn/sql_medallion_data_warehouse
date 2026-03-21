@@ -2,15 +2,13 @@
 ============================================================
 Stored procedure: Load Bronze layer
 ============================================================
-Script Purpose:
-  This stored procedure loads data (CRM and ERP) into the bronze schema from csv files.
-  It performs the following actions:
-	- Truncates the bronze tables before loading data.
-	- Uses the BULK INSERT command to load data from csv files to bronze tables.
-	- Prints out updates on the process and running times for each load and the whole batch.
-	- Prints out errors number and details (if any) to aid debugging.
-  Parameters:
-	- @data_root_path (required): Root path that contains source_crm and source_erp folders.
+Why this script exists:
+  Keep source ingestion repeatable and transparent so bronze remains a trusted
+  landing zone for raw CRM and ERP files.
+
+Parameter intent:
+	- @data_root_path (required): decouples file location from procedure code so
+	  the same load logic works across machines and environments.
 
 Usage example:
 	EXEC bronze.load_bronze @data_root_path = 'C:\data\sql_medallion_data_warehouse\datasets';
@@ -56,7 +54,7 @@ BEGIN
 		PRINT '======================================';
 
 		-----------------------------------------------------------------------------------------------------
-		-- CRM Full loads
+		-- Load CRM entities first so downstream customer/product links have complete source context.
 		PRINT '--------------------------------------';
 		PRINT 'Loading CRM Tables';
 		PRINT '--------------------------------------';
@@ -143,7 +141,7 @@ BEGIN
 
 
 		-----------------------------------------------------------------------------------------------------
-		-- ERP Full loads
+		-- Load ERP entities after CRM so enrichment sources are refreshed in the same run window.
 		PRINT '--------------------------------------';
 		PRINT 'Loading ERP Tables';
 		PRINT '--------------------------------------';

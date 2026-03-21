@@ -2,10 +2,9 @@
 ============================================================
 Create DDL for the gold layer views
 ============================================================
-Script Purpose:
-  This script creates the semantic views for the 'gold' schema in the
-  'DataWarehouse' database.
-  The gold layer contains business-ready dimensions and facts for analytics.
+Why this script exists:
+	Expose a stable semantic model that business users can query without
+	re-implementing cleansing or joining logic.
 
 WARNING: Re-running this script will alter existing views in the gold layer.
 Validate downstream BI/report dependencies before deployment.
@@ -14,7 +13,7 @@ Validate downstream BI/report dependencies before deployment.
 USE DataWarehouse;
 GO
 
-/* Ensure the `gold` schema exists (safe to run in DataWarehouse) */
+/* Keep deployment idempotent so new environments can adopt the same script. */
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'gold')
 BEGIN
 	EXEC('CREATE SCHEMA gold');
@@ -22,7 +21,7 @@ END
 GO
 
 
--- Create or alter dimension views in the gold schema
+-- Build conformed dimensions first so fact joins resolve to stable surrogate keys.
 
 CREATE OR ALTER VIEW gold.dim_customers AS
 SELECT
@@ -67,19 +66,19 @@ WHERE pn.prd_end_dt IS NULL; -- Filter historical data
 GO
 
 
--- Create or alter fact view in the gold schema
+-- Centralize transaction grain to prevent duplicated business logic across reports.
 
 CREATE OR ALTER VIEW gold.fact_sales AS
 SELECT
-	-- Keys
+	-- Group fields by analytic role to keep the semantic contract readable.
 	sd.sls_ord_num AS order_number,
 	pr.product_key,
 	cu.customer_key,
-	-- Dates
+
 	sd.sls_order_dt AS order_date,
 	sd.sls_ship_dt AS shipping_date,
 	sd.sls_due_dt AS due_date,
-	-- Measures
+
 	sd.sls_sales AS sales_amount,
 	sd.sls_quantity AS quantity,
 	sd.sls_price
@@ -91,7 +90,7 @@ LEFT JOIN gold.dim_customers cu
 GO
 
 
--- Create or alter pricing KPI view in the gold schema
+-- Pre-aggregate pricing KPIs to make recurring month-level analysis faster and consistent.
 
 CREATE OR ALTER VIEW gold.pricing_kpi_monthly AS
 SELECT

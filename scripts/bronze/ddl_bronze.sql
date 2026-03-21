@@ -2,9 +2,9 @@
 ============================================================
 Create DDL for the bronze layer tables
 ============================================================
-Script Purpose:
-  This script creates the DDL for the bronze layer tables in the 'DataWarehouse' database.
-  The bronze layer typically contains raw, unprocessed data ingested from various sources.
+Why this script exists:
+	Preserve source fidelity in dedicated raw tables so upstream ingestion issues
+	can be audited without transformation side effects.
 
 WARNING: Running this script will drop any tables that match the defined name, this data
 will be permanently deleted. Proceed with caution and ensure you have proper backups before
@@ -17,11 +17,11 @@ GO
 
 
 
--- Create or replace the CRM tables in the bronze schema
+-- Recreate raw CRM tables so file loads stay idempotent across reruns.
 
 IF OBJECT_ID ('bronze.crm_cust_info', 'U') IS NOT NULL
 	DROP TABLE bronze.crm_cust_info;
-CREATE TABLE bronze.crm_cust_info(     --CUSTOMER INFO
+CREATE TABLE bronze.crm_cust_info(
 cst_id INT,
 cst_key NVARCHAR(50),
 cst_firstname NVARCHAR(50),
@@ -33,7 +33,7 @@ cst_create_date DATE
 
 IF OBJECT_ID ('bronze.crm_prd_info', 'U') IS NOT NULL
 	DROP TABLE bronze.crm_prd_info;
-CREATE TABLE bronze.crm_prd_info(     --PRODUCT INFO
+CREATE TABLE bronze.crm_prd_info(
 prd_id INT,
 prd_key NVARCHAR(50),
 prd_nm NVARCHAR(50),
@@ -45,7 +45,7 @@ prd_end_dt DATE
 
 IF OBJECT_ID ('bronze.crm_sales_details', 'U') IS NOT NULL
 	DROP TABLE bronze.crm_sales_details;
-CREATE TABLE bronze.crm_sales_details(     --SALES DETAILS
+CREATE TABLE bronze.crm_sales_details(
 sls_ord_num NVARCHAR(50),
 sls_prd_key NVARCHAR(50),
 sls_cust_id INT,
@@ -58,18 +58,18 @@ sls_price INT
 );
 
 
--- Create the ERP tables in the bronze schema
+-- Recreate raw ERP tables so both source systems stay traceable independently.
 
 IF OBJECT_ID ('bronze.erp_loc_a101', 'U') IS NOT NULL
 	DROP TABLE bronze.erp_loc_a101;
-CREATE TABLE bronze.erp_loc_a101(     --CUSTOMER LOCATION
+CREATE TABLE bronze.erp_loc_a101(
 cid NVARCHAR(50),
 cntry NVARCHAR (50)
 );
 
 IF OBJECT_ID ('bronze.erp_cust_az12', 'U') IS NOT NULL
 	DROP TABLE bronze.erp_cust_az12;
-CREATE TABLE bronze.erp_cust_az12(     --CUSTOMER AGE
+CREATE TABLE bronze.erp_cust_az12(
 cid NVARCHAR(50),
 bdate DATE,
 gen NVARCHAR(50)
@@ -77,7 +77,7 @@ gen NVARCHAR(50)
 
 IF OBJECT_ID ('bronze.erp_px_cat_g1v2', 'U') IS NOT NULL
 	DROP TABLE bronze.erp_px_cat_g1v2;
-CREATE TABLE bronze.erp_px_cat_g1v2(     --PRODUCT CATEGORY
+CREATE TABLE bronze.erp_px_cat_g1v2(
 id NVARCHAR(50),
 cat NVARCHAR(50),
 subcat NVARCHAR(50),

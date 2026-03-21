@@ -2,10 +2,9 @@
 ============================================================
 Create the database and its schemas
 ============================================================
-Script Purpose:
-  This script creates a new database named 'DataWarehouse' after checking if it already exists.
-  If the database exists, it is dropped and recreated. Additionally, the script sets up three schemas
-  within the database: bronze, silver, and gold
+Why this script exists:
+  Provide a clean, repeatable baseline so every layer starts from a known state.
+  Recreating the database avoids drift from prior local runs.
 
 WARNING: Running this script will drop the entire 'DataWarehouse' database if it exists,
 all data in the database will be permanently deleted. Proceed with caution and ensure you
@@ -16,7 +15,7 @@ USE master;
 GO
 
   
--- Drop and recreate the 'DataWarehouse' database
+-- Recreate the database to avoid carrying over stale objects from prior runs.
 IF EXISTS (SELECT 1 FROM sys.databases WHERE name='DataWarehouse')
 BEGIN
     ALTER DATABASE DataWarehouse SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -25,7 +24,7 @@ END;
 GO
 
 
--- Create the Data Warehouse
+-- Create the baseline analytical database.
 CREATE DATABASE DataWarehouse;
 GO
 
@@ -33,7 +32,7 @@ USE DataWarehouse;
 GO
 
 
--- Create schemas
+-- Separate schemas to preserve clear layer boundaries and ownership.
 CREATE SCHEMA bronze;
 GO
 CREATE SCHEMA silver;

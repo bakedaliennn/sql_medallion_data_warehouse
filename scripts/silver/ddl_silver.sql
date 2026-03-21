@@ -2,27 +2,26 @@
 ============================================================
 Create DDL for the silver layer tables
 ============================================================
-Script Purpose:
-  This script creates the DDL for the silver layer tables in the 'DataWarehouse' database.
-  The silver layer contains cleaned and standardized records derived from the bronze layer.
+Why this script exists:
+	Provide stable, cleaned structures where business rules are enforced before
+	data is exposed to downstream analytics and semantic views.
 
 WARNING: Running this script will drop any tables that match the defined name; this data
 will be permanently deleted. Proceed with caution and ensure you have proper backups before
 running the script.
--- Create or replace the CRM tables in the silver schema
 */
 
 USE DataWarehouse;
 GO
 
-/* Ensure the `silver` schema exists (safe to run in DataWarehouse) */
+/* Guarantee schema availability so this script is deployable in fresh environments. */
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'silver')
 BEGIN
 	EXEC('CREATE SCHEMA silver');
 END
 
 
--- Create or replace the CRM tables in the silver schema
+-- Recreate silver CRM tables so transformation contracts stay deterministic per run.
 
 IF OBJECT_ID('silver.crm_cust_info', 'U') IS NOT NULL
 	DROP TABLE silver.crm_cust_info;
@@ -67,7 +66,7 @@ CREATE TABLE silver.crm_sales_details (
 );
 
 
--- Create the ERP tables in the silver schema
+-- Recreate silver ERP tables to keep standardized entities aligned with CRM outputs.
 
 IF OBJECT_ID('silver.erp_cust_az12', 'U') IS NOT NULL
 	DROP TABLE silver.erp_cust_az12;
