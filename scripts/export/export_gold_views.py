@@ -27,10 +27,14 @@ import sqlalchemy
 #   DW_SERVER (default: localhost)
 #   DW_DATABASE (default: DataWarehouse)
 #   DW_USERNAME / DW_PASSWORD (if both are set, SQL auth is used)
+#   DW_ENCRYPT (default: yes)
+#   DW_TRUST_SERVER_CERTIFICATE (default: yes)
 SERVER = os.getenv("DW_SERVER", "localhost")       # e.g. "localhost\\SQLEXPRESS"
 DATABASE = os.getenv("DW_DATABASE", "DataWarehouse")
 USERNAME = os.getenv("DW_USERNAME")
 PASSWORD = os.getenv("DW_PASSWORD")
+ENCRYPT = os.getenv("DW_ENCRYPT", "yes")
+TRUST_SERVER_CERTIFICATE = os.getenv("DW_TRUST_SERVER_CERTIFICATE", "yes")
 # ──────────────────────────────────────────────────────────────
 
 
@@ -86,12 +90,16 @@ def build_engine() -> sqlalchemy.Engine:
         connection_string = (
             f"mssql+pyodbc://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}"
             f"?driver={driver}"
+            f"&Encrypt={ENCRYPT}"
+            f"&TrustServerCertificate={TRUST_SERVER_CERTIFICATE}"
         )
     else:
         connection_string = (
             f"mssql+pyodbc://{SERVER}/{DATABASE}"
             f"?driver={driver}"
             "&Trusted_Connection=yes"
+            f"&Encrypt={ENCRYPT}"
+            f"&TrustServerCertificate={TRUST_SERVER_CERTIFICATE}"
         )
     return sqlalchemy.create_engine(connection_string, fast_executemany=True)
 
