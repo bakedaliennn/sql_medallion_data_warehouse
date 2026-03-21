@@ -73,6 +73,9 @@ VIEWS = {
     "gold.dim_products":  "dim_products.csv",
     "gold.fact_sales":    "fact_sales.csv",
     "gold.pricing_kpi_monthly": "pricing_kpi_monthly.csv",
+    "gold.rpt_sales_monthly_category_country": "rpt_sales_monthly_category_country.csv",
+    "gold.rpt_product_performance_monthly": "rpt_product_performance_monthly.csv",
+    "gold.rpt_customer_country_monthly": "rpt_customer_country_monthly.csv",
 }
 
 

@@ -50,6 +50,9 @@ Install the following before running anything else:
 	- `gold.dim_products`
 	- `gold.fact_sales`
 	- `gold.pricing_kpi_monthly`
+	- `gold.rpt_sales_monthly_category_country`
+	- `gold.rpt_product_performance_monthly`
+	- `gold.rpt_customer_country_monthly`
 - Views are created with `CREATE OR ALTER VIEW` for idempotent deployment.
 
 ### Export Layer (`scripts/export`)
@@ -63,6 +66,84 @@ Install the following before running anything else:
 	- product and category revenue breakdown,
 	- customer demographics (gender, marital status, age, country),
 	- key summary KPIs.
+
+## Execution Roadmap: SQL Reporting Layer + Power BI Connection
+
+This roadmap operationalizes two improvements:
+- Action 1: create SQL reporting views tailored for EDA and charting.
+- Action 2: connect Power BI directly to SQL Gold/Reporting views for production BI.
+
+Implementation status:
+1. Action 1 implemented in SQL and export pipeline.
+2. Action 2 documented and ready for Power BI workspace execution.
+
+### Action 1 - SQL Reporting Views for EDA Efficiency
+
+Goal: push repeated heavy joins and aggregations to SQL, leaving Python notebooks focused on visualization and interpretation.
+
+Phase 1 (Design)
+1. Define canonical reporting grains and KPI definitions.
+2. Confirm metric ownership in SQL (single source of truth).
+3. Freeze naming conventions for reporting objects under the `gold` schema.
+
+Phase 2 (Build) - implemented
+1. Add reporting views in SQL with `CREATE OR ALTER VIEW`:
+   - `gold.rpt_sales_monthly_category_country`
+   - `gold.rpt_product_performance_monthly`
+   - `gold.rpt_customer_country_monthly`
+2. Keep filters and business rules aligned with existing silver/gold quality checks.
+3. Ensure each view includes analyst-friendly fields and avoids identifier-only outputs unless needed for joins.
+
+Phase 3 (Validation) - implemented in SQL test script
+1. Reconcile aggregates against `gold.fact_sales` and `gold.pricing_kpi_monthly`.
+2. Add view-level quality checks in `tests/quality_checks_gold.sql`.
+3. Validate row counts, duplicate grain, null critical fields, and metric ranges.
+
+Phase 4 (Notebook Adoption) - in progress
+1. Update notebook queries to consume reporting views (or their CSV exports).
+2. Remove redundant Python checks already guaranteed by SQL tests.
+3. Keep lightweight notebook smoke checks (file existence, date range, non-empty outputs).
+
+Acceptance criteria
+1. Notebook runtime for aggregate charts decreases versus raw `fact_sales` approach.
+2. KPI values in notebook match SQL validation outputs.
+3. No duplicated KPI logic between SQL and Python.
+
+### Action 2 - Power BI Directly Connected to SQL
+
+Goal: use SQL as the semantic and performance layer for dashboards, while preserving CSV exports for offline analysis.
+
+Phase 1 (Dataset Contract)
+1. Expose only business-ready Gold/Reporting views for BI.
+2. Define approved measures and dimensional drill paths.
+3. Document refresh expectations and data latency.
+
+Phase 2 (Power BI Model)
+1. Connect Power BI to SQL Server using Import mode first.
+2. Build star-like relationships from dimensions to reporting/fact views.
+3. Implement core measures in DAX only when they are presentation-specific.
+
+Phase 3 (Performance and Refresh)
+1. Configure scheduled refresh.
+2. Add incremental refresh when dataset size warrants it.
+3. Track refresh duration and query performance baselines.
+
+Phase 4 (Governance)
+1. Restrict report authors to approved views to avoid KPI drift.
+2. Version-control SQL changes and align Power BI updates with release notes.
+3. Keep Python notebook and Power BI consuming the same definitions.
+
+Acceptance criteria
+1. Power BI dashboards reconcile with SQL and notebook KPI values.
+2. Refresh completes within agreed time window.
+3. No duplicate business-rule transformations in Power BI.
+
+### Suggested Execution Order
+1. Run `scripts/gold/ddl_gold.sql` to create/update all reporting views.
+2. Run `tests/quality_checks_gold.sql` to validate reporting grains and KPIs.
+3. Run `python scripts/export/export_gold_views.py` to publish reporting CSVs.
+4. Connect Power BI to SQL Gold/Reporting views (Import mode first).
+5. Keep CSV exports as fallback and portability layer.
 
 ## Source Data
 
@@ -96,6 +177,9 @@ exports/
         dim_products.csv
         fact_sales.csv
 	pricing_kpi_monthly.csv
+	rpt_sales_monthly_category_country.csv
+	rpt_product_performance_monthly.csv
+	rpt_customer_country_monthly.csv
 notebooks/
     01_eda_gold_layer.ipynb    ← exploratory data analysis
 tests/
@@ -181,6 +265,7 @@ Quality checks are provided for both transformed layers:
 ## Documentation
 
 - Data catalog for gold entities and columns: `docs/data_catalog.md`
+- Power BI implementation runbook: `docs/power_bi_runbook.md`
 - SQL implementation scripts: `scripts/`
 - Validation scripts: `tests/`
 
@@ -202,6 +287,7 @@ Quality checks are provided for both transformed layers:
 - The Python export script defaults to **Windows Authentication**, and also supports SQL login via `DW_USERNAME` + `DW_PASSWORD` environment variables.
 - The export script **auto-detects** your installed ODBC Driver (18 → 17 → 13). If none is found, it prints a download link.
 - Exported CSVs in `exports/gold/` are tracked in git so the notebook layer can run without a live SQL Server connection. `.xlsx` files are excluded via `.gitignore`.
+- For production BI, prefer direct Power BI connection to SQL Gold/Reporting views using Import mode first (see `docs/power_bi_runbook.md`).
 
 ## License
 
