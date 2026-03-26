@@ -2,9 +2,10 @@
 ============================================================
 Create DDL for the gold layer views
 ============================================================
-Why this script exists:
-	Expose a stable semantic model that business users can query without
-	re-implementing cleansing or joining logic.
+Script Purpose:
+  This script creates the semantic views for the 'gold' schema in the
+  'DataWarehouse' database.
+  The gold layer contains business-ready dimensions and facts for analytics.
 
 WARNING: Re-running this script will alter existing views in the gold layer.
 Validate downstream BI/report dependencies before deployment.
@@ -13,7 +14,7 @@ Validate downstream BI/report dependencies before deployment.
 USE DataWarehouse;
 GO
 
-/* Keep deployment idempotent so new environments can adopt the same script. */
+/* Ensure the `gold` schema exists (safe to run in DataWarehouse) */
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'gold')
 BEGIN
 	EXEC('CREATE SCHEMA gold');
@@ -21,7 +22,7 @@ END
 GO
 
 
--- Build conformed dimensions first so fact joins resolve to stable surrogate keys.
+-- Create or alter dimension views in the gold schema
 
 CREATE OR ALTER VIEW gold.dim_customers AS
 SELECT
@@ -66,19 +67,19 @@ WHERE pn.prd_end_dt IS NULL; -- Filter historical data
 GO
 
 
--- Centralize transaction grain to prevent duplicated business logic across reports.
+-- Create or alter fact view in the gold schema
 
 CREATE OR ALTER VIEW gold.fact_sales AS
 SELECT
-	-- Group fields by analytic role to keep the semantic contract readable.
+	-- Keys
 	sd.sls_ord_num AS order_number,
 	pr.product_key,
 	cu.customer_key,
-
+	-- Dates
 	sd.sls_order_dt AS order_date,
 	sd.sls_ship_dt AS shipping_date,
 	sd.sls_due_dt AS due_date,
-
+	-- Measures
 	sd.sls_sales AS sales_amount,
 	sd.sls_quantity AS quantity,
 	sd.sls_price
@@ -90,7 +91,7 @@ LEFT JOIN gold.dim_customers cu
 GO
 
 
--- Pre-aggregate pricing KPIs to make recurring month-level analysis faster and consistent.
+-- Create or alter pricing KPI view in the gold schema
 
 CREATE OR ALTER VIEW gold.pricing_kpi_monthly AS
 SELECT
@@ -122,115 +123,4 @@ GROUP BY
 	dp.category,
 	dp.subcategory,
 	dc.country;
-GO
-
-
--- Reporting view: month-category-country summary for trend and dashboard use cases.
-
-CREATE OR ALTER VIEW gold.rpt_sales_monthly_category_country AS
-SELECT
-	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
-	dp.category,
-	dc.country,
-	COUNT_BIG(*) AS sales_line_count,
-	COUNT(DISTINCT fs.order_number) AS order_count,
-	SUM(CAST(fs.quantity AS BIGINT)) AS units_sold,
-	COUNT(DISTINCT fs.order_date) AS active_days,
-	CAST(SUM(fs.sales_amount) AS DECIMAL(18,2)) AS gross_sales_amount,
-	CAST(SUM(fs.sales_amount) / NULLIF(COUNT(DISTINCT fs.order_number), 0) AS DECIMAL(18,2)) AS avg_order_value,
-	CAST(SUM(fs.sales_amount) / NULLIF(COUNT(DISTINCT fs.order_date), 0) AS DECIMAL(18,2)) AS sales_per_active_day
-FROM gold.fact_sales fs
-INNER JOIN gold.dim_products dp
-	ON fs.product_key = dp.product_key
-INNER JOIN gold.dim_customers dc
-	ON fs.customer_key = dc.customer_key
-WHERE fs.order_date IS NOT NULL
-GROUP BY
-	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1),
-	dp.category,
-	dc.country;
-GO
-
-
--- Reporting view: product-level monthly scorecard for ranking and mix analysis.
-
-CREATE OR ALTER VIEW gold.rpt_product_performance_monthly AS
-SELECT
-	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
-	dp.product_key,
-	dp.product_number,
-	dp.product_name,
-	dp.category,
-	dp.subcategory,
-	COUNT_BIG(*) AS sales_line_count,
-	COUNT(DISTINCT fs.order_number) AS order_count,
-	SUM(CAST(fs.quantity AS BIGINT)) AS units_sold,
-	CAST(SUM(fs.sales_amount) AS DECIMAL(18,2)) AS gross_sales_amount,
-	CAST(SUM(fs.sales_amount) / NULLIF(SUM(CAST(fs.quantity AS DECIMAL(18,4))), 0) AS DECIMAL(18,4)) AS weighted_avg_unit_price,
-	MIN(fs.sls_price) AS min_unit_price,
-	MAX(fs.sls_price) AS max_unit_price
-FROM gold.fact_sales fs
-INNER JOIN gold.dim_products dp
-	ON fs.product_key = dp.product_key
-WHERE fs.order_date IS NOT NULL
-GROUP BY
-	DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1),
-	dp.product_key,
-	dp.product_number,
-	dp.product_name,
-	dp.category,
-	dp.subcategory;
-GO
-
-
--- Reporting view: customer-country monthly activity and revenue concentration.
-
-CREATE OR ALTER VIEW gold.rpt_customer_country_monthly AS
-WITH customer_month AS (
-	SELECT DISTINCT
-		DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
-		dc.country,
-		dc.customer_key,
-		CASE
-			WHEN dc.create_date IS NOT NULL
-				AND DATEFROMPARTS(YEAR(dc.create_date), MONTH(dc.create_date), 1) = DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1)
-			THEN 1 ELSE 0
-		END AS is_new_customer
-	FROM gold.fact_sales fs
-	INNER JOIN gold.dim_customers dc
-		ON fs.customer_key = dc.customer_key
-	WHERE fs.order_date IS NOT NULL
-),
-monthly_sales AS (
-	SELECT
-		DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1) AS order_month,
-		dc.country,
-		COUNT(DISTINCT fs.order_number) AS order_count,
-		CAST(SUM(fs.sales_amount) AS DECIMAL(18,2)) AS gross_sales_amount
-	FROM gold.fact_sales fs
-	INNER JOIN gold.dim_customers dc
-		ON fs.customer_key = dc.customer_key
-	WHERE fs.order_date IS NOT NULL
-	GROUP BY
-		DATEFROMPARTS(YEAR(fs.order_date), MONTH(fs.order_date), 1),
-		dc.country
-)
-SELECT
-	cm.order_month,
-	cm.country,
-	COUNT(*) AS active_customers,
-	SUM(cm.is_new_customer) AS new_customers,
-	COUNT(*) - SUM(cm.is_new_customer) AS returning_customers,
-	ms.order_count,
-	ms.gross_sales_amount,
-	CAST(ms.gross_sales_amount / NULLIF(COUNT(*), 0) AS DECIMAL(18,2)) AS avg_revenue_per_customer
-FROM customer_month cm
-INNER JOIN monthly_sales ms
-	ON cm.order_month = ms.order_month
-	AND cm.country = ms.country
-GROUP BY
-	cm.order_month,
-	cm.country,
-	ms.order_count,
-	ms.gross_sales_amount;
 GO

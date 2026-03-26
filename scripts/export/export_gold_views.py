@@ -2,20 +2,18 @@
 ==============================================================
 Export Gold Layer Views to CSV
 ==============================================================
-Why this script exists:
-  Publish a portable analytics extract from the gold semantic layer so notebooks
-  and downstream consumers can run without a live SQL connection.
+Connects to the DataWarehouse SQL Server database, queries the
+gold views, and writes each one to a CSV file inside
+exports/gold/.
 
 Usage (from the repo root, with the conda env active):
     python scripts/export/export_gold_views.py
 
-Operational notes:
-    Configure connection settings through DW_* environment variables.
-    Defaults target local Windows Authentication for fast local onboarding.
-
-Warning:
-    ODBC Driver 18 may require certificate trust settings in local environments.
-    Use DW_ENCRYPT and DW_TRUST_SERVER_CERTIFICATE as needed.
+Configuration:
+    Edit the SERVER and DATABASE constants below to match your
+    SQL Server instance.  Windows Authentication is used by
+    default (Trusted_Connection=yes).  For SQL login, swap the
+    connection string for the one shown in the comments.
 """
 
 import os
@@ -24,19 +22,16 @@ import pandas as pd
 import pyodbc
 import sqlalchemy
 
-# Connection defaults prioritize local development ergonomics.
+# ── Configuration ──────────────────────────────────────────────
 # Optional environment variables:
 #   DW_SERVER (default: localhost)
 #   DW_DATABASE (default: DataWarehouse)
 #   DW_USERNAME / DW_PASSWORD (if both are set, SQL auth is used)
-#   DW_ENCRYPT (default: yes)
-#   DW_TRUST_SERVER_CERTIFICATE (default: yes)
 SERVER = os.getenv("DW_SERVER", "localhost")       # e.g. "localhost\\SQLEXPRESS"
 DATABASE = os.getenv("DW_DATABASE", "DataWarehouse")
 USERNAME = os.getenv("DW_USERNAME")
 PASSWORD = os.getenv("DW_PASSWORD")
-ENCRYPT = os.getenv("DW_ENCRYPT", "yes")
-TRUST_SERVER_CERTIFICATE = os.getenv("DW_TRUST_SERVER_CERTIFICATE", "yes")
+# ──────────────────────────────────────────────────────────────
 
 
 def _find_odbc_driver() -> str:
@@ -62,20 +57,17 @@ def _find_odbc_driver() -> str:
         f"Drivers currently installed: {sorted(available) or ['(none)']}"
     )
 
-# Keep exports under versioned project artifacts for reproducible analysis inputs.
+# Output folder (repo-root/exports/gold/)
 REPO_ROOT  = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "exports" / "gold"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Pin exported datasets to canonical gold entities to keep notebook assumptions stable.
+# Gold views to export  { view name: output CSV filename }
 VIEWS = {
     "gold.dim_customers": "dim_customers.csv",
     "gold.dim_products":  "dim_products.csv",
     "gold.fact_sales":    "fact_sales.csv",
     "gold.pricing_kpi_monthly": "pricing_kpi_monthly.csv",
-    "gold.rpt_sales_monthly_category_country": "rpt_sales_monthly_category_country.csv",
-    "gold.rpt_product_performance_monthly": "rpt_product_performance_monthly.csv",
-    "gold.rpt_customer_country_monthly": "rpt_customer_country_monthly.csv",
 }
 
 
@@ -94,16 +86,12 @@ def build_engine() -> sqlalchemy.Engine:
         connection_string = (
             f"mssql+pyodbc://{USERNAME}:{PASSWORD}@{SERVER}/{DATABASE}"
             f"?driver={driver}"
-            f"&Encrypt={ENCRYPT}"
-            f"&TrustServerCertificate={TRUST_SERVER_CERTIFICATE}"
         )
     else:
         connection_string = (
             f"mssql+pyodbc://{SERVER}/{DATABASE}"
             f"?driver={driver}"
             "&Trusted_Connection=yes"
-            f"&Encrypt={ENCRYPT}"
-            f"&TrustServerCertificate={TRUST_SERVER_CERTIFICATE}"
         )
     return sqlalchemy.create_engine(connection_string, fast_executemany=True)
 
