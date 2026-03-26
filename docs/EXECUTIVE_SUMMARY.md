@@ -97,7 +97,7 @@ El proyecto demuestra capacidades directamente aplicables a roles de Pricing Ana
 
 **Responsable Principal**: Data Engineer + DevOps Automator
 
-- Script Python `scripts/export/export_gold_views.py` exporta todas las vistas Gold a CSVs UTF-8 en `exports/gold/`
+- Script Python `scripts/export/export_gold_views.py` exporta las vistas principales de la capa Gold (modelo semántico) a CSVs UTF-8 en `exports/gold/`
 - Auto-detección de ODBC Driver (18 → 17 → 13)
 - Soporte para Windows Auth y SQL Auth (variables de entorno)
 - CSVs commiteados en el repositorio: el notebook funciona sin conexión SQL Server activa
