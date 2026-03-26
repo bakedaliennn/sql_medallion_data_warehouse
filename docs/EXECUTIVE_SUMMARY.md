@@ -181,7 +181,7 @@ Jupyter notebook `notebooks/01_eda_gold_layer.ipynb` cubre:
 | Tarea | Descripción | Prioridad | Criterio de Éxito |
 |-------|-------------|-----------|------------------|
 | Branch protection rules | Habilitar reglas de protección en GitHub (bloquear merge sin evidencia completa) | Alta | Cero bypasses en merges |
-| CI/CD Workflow completo | Verificar e integrar `medallion_quality_gates.yml` con los 7 gates automatizados | Alta | Todos los commits validados en < 3 min |
+| CI/CD Workflow completo | Verificar e integrar [`.github/workflows/medallion_quality_gates.yml`](.github/workflows/medallion_quality_gates.yml) con los 7 gates automatizados | Alta | Todos los commits validados en < 3 min |
 | Clasificación de riesgo | Vincular checklist de evidencia al flujo de aprobación de PRs | Media | 100% de merges con evidencia |
 
 ---
