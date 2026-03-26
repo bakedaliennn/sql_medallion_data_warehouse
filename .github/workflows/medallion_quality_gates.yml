@@ -1,0 +1,155 @@
+name: Medallion Pipeline Quality Gates
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/bronze/**'
+      - 'scripts/silver/**'
+      - 'scripts/gold/**'
+      - 'scripts/export/**'
+      - 'tests/**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sql_lint_and_format:
+    name: SQL Lint and Format Check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SQL Format Validation
+        run: |
+          echo "Validating SQL formatting and structure..."
+          Get-ChildItem -Path scripts -Recurse -Filter "*.sql" | ForEach-Object {
+            if ($_ -match "(sp_DropObjectIfExists|DROP TABLE|TRUNCATE)" -and $_ -notmatch "^\\s*--") {
+              Write-Error "Destructive operation without comment block in $_"
+              exit 1
+            }
+          }
+          echo "✓ SQL format validation passed"
+
+  bronze_layer_check:
+    name: Bronze Layer Quality Check
+    runs-on: windows-latest
+    needs: sql_lint_and_format
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bronze Table Existence Check
+        run: |
+          echo "Checking bronze layer contract compliance..."
+          $expectedTables = @('crm_cust_info', 'crm_prd_info', 'crm_sales_details', 'erp_cust_az12', 'erp_loc_a101', 'erp_px_cat_g1v2')
+          $ddlContent = Get-Content -Path scripts/bronze/ddl_bronze.sql -Raw
+          foreach ($table in $expectedTables) {
+            if ($ddlContent -notmatch "CREATE TABLE.*$table") {
+              Write-Error "Bronze table $table not defined in DDL"
+              exit 1
+            }
+          }
+          echo "✓ Bronze layer contract verified"
+
+  silver_layer_check:
+    name: Silver Layer Quality Check
+    runs-on: windows-latest
+    needs: bronze_layer_check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Silver Transformation Validation
+        run: |
+          echo "Checking silver layer transformations..."
+          $procContent = Get-Content -Path scripts/silver/proc_load_silver.sql -Raw
+          if ($procContent -notmatch "MERGE|UPDATE|INSERT") {
+            Write-Error "Silver proc missing DML statements"
+            exit 1
+          }
+          echo "✓ Silver layer transformation contract verified"
+
+  gold_layer_check:
+    name: Gold Layer Quality Check
+    runs-on: windows-latest
+    needs: silver_layer_check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gold View Contract Validation
+        run: |
+          echo "Checking gold layer view contracts..."
+          $expectedViews = @('dim_customers', 'dim_products', 'fact_sales', 'pricing_kpi_monthly')
+          $ddlContent = Get-Content -Path scripts/gold/ddl_gold.sql -Raw
+          foreach ($view in $expectedViews) {
+            if ($ddlContent -notmatch "CREATE.*VIEW.*$view") {
+              Write-Error "Gold view $view not defined"
+              exit 1
+            }
+          }
+          echo "✓ Gold layer contract verified"
+
+  export_validation:
+    name: Export Script Validation
+    runs-on: windows-latest
+    needs: gold_layer_check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Python Export Script Lint
+        run: |
+          pip install pylint --quiet
+          pylint scripts/export/export_gold_views.py --fail-under=8.0
+          echo "✓ Export script validation passed"
+
+  security_scan:
+    name: Security Scanning
+    runs-on: windows-latest
+    needs: export_validation
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secrets Detection
+        run: |
+          echo "Scanning for hardcoded credentials..."
+          $sensitivePatterns = @(
+            'password\s*=\s*["\']',
+            'api_key\s*=\s*["\']',
+            'secret\s*=\s*["\']',
+            'token\s*=\s*["\']'
+          )
+          $foundIssue = $false
+          Get-ChildItem -Path scripts -Recurse -Include "*.sql", "*.py" | ForEach-Object {
+            $content = Get-Content -Path $_.FullName -Raw
+            foreach ($pattern in $sensitivePatterns) {
+              if ($content -match $pattern -and $_.Name -notmatch "template|example") {
+                Write-Warning "Potential credential pattern in $_"
+                $foundIssue = $true
+              }
+            }
+          }
+          if ($foundIssue) {
+            Write-Error "Security scan detected potential credential exposure"
+            exit 1
+          }
+          echo "✓ No hardcoded credentials detected"
+
+  quality_gate_results:
+    name: Consolidate Quality Gate Results
+    runs-on: windows-latest
+    needs: [ sql_lint_and_format, bronze_layer_check, silver_layer_check, gold_layer_check, export_validation, security_scan ]
+    if: always()
+    steps:
+      - name: Report Quality Gate Status
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "Quality Gate Execution Summary"
+          echo "═══════════════════════════════════════════════════"
+          echo "SQL Lint: ${{ needs.sql_lint_and_format.result }}"
+          echo "Bronze Layer: ${{ needs.bronze_layer_check.result }}"
+          echo "Silver Layer: ${{ needs.silver_layer_check.result }}"
+          echo "Gold Layer: ${{ needs.gold_layer_check.result }}"
+          echo "Export Validation: ${{ needs.export_validation.result }}"
+          echo "Security Scan: ${{ needs.security_scan.result }}"
+          echo "═══════════════════════════════════════════════════"
+          
+          if ("${{ needs.sql_lint_and_format.result }}" -ne "success" -or "${{ needs.security_scan.result }}" -ne "success") {
+            Write-Error "Critical quality gate failed - blocking merge"
+            exit 1
+          }
+          echo "✓ All quality gates passed - merge approved"
