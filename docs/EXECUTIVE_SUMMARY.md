@@ -164,12 +164,12 @@ Jupyter notebook `notebooks/01_eda_gold_layer.ipynb` cubre:
 
 ### 3.1 🟢 AHORA — Fase 2: Observabilidad (Abril 2026)
 
-**Dueño**: Database Optimizer + Analytics Reporter + DevOps Automator
+**Dueño**: Product Manager (Facilitador) + Database Optimizer + Analytics Reporter + DevOps Automator
 
 | Tarea | Descripción | Prioridad | Criterio de Éxito |
 |-------|-------------|-----------|------------------|
 | Dashboard de SLOs | Implementar `SLO_TRACKING_DASHBOARD_SPEC.md` con paneles en tiempo real (P95/P99, compliance, índices, freshness) | Alta | Dashboard actualizado cada 5 min; alertas activas |
-| Primera retrospectiva mensual | Ejecutar scorecard de gobernanza del mes de Abril según `GOVERNANCE_RETROSPECTIVE_SCORECARD.md` | Alta | Scorecard completado el primer lunes de Abril, 10am UTC |
+| Primera retrospectiva mensual | Ejecutar, facilitado por el Product Manager, el scorecard de gobernanza del mes de Abril según `GOVERNANCE_RETROSPECTIVE_SCORECARD.md` | Alta | Scorecard completado el primer lunes de Abril, 10am UTC |
 | Monitoreo de SLOs en DMVs | Implementar queries sobre `sys.dm_exec_query_stats`, `sys.dm_db_index_physical_stats` | Media | Todos los 5 patrones de query monitoreados |
 
 ---
