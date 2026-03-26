@@ -156,7 +156,7 @@ Jupyter notebook `notebooks/01_eda_gold_layer.ipynb` cubre:
 - Ciclo 3 (Mar 2026 S1-S2): 6 decisiones — CI/CD, monitoreo SLO, scorecard, pooling, protocolo de brechas, loop de verificación
 - Ciclo 4 (25 Mar 2026): 4 decisiones — Modelo de mantenimiento, publicación, fases de despliegue, backlog v1.1
 
-**Consenso del equipo**: 9.1/10 | 10.2/11 agentes de acuerdo en promedio | Cero overrides del PM
+**Consenso del equipo**: 9.1/10 | promedio de acuerdo: 92.7% de agentes (10.2 de 11 votos en promedio por decisión) | Cero overrides del PM
 
 ---
 
